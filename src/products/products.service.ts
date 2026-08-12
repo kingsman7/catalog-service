@@ -1,9 +1,8 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Inject } from '@nestjs/common';
+import { Injectable, OnModuleInit, Inject } from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto.js';
 import { UpdateProductDto } from './dto/update-product.dto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { ClientKafka } from '@nestjs/microservices';
-
 
 @Injectable()
 export class ProductsService implements OnModuleInit {
@@ -13,8 +12,11 @@ export class ProductsService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    // Conectar el cliente de Kafka al arrancar el módulo
-    await this.kafkaClient.connect();
+    try {
+      await this.kafkaClient.connect();
+    } catch (err: any) {
+      console.warn('⚠️ [AI Studio] Kafka broker not available. Microservice events disabled.');
+    }
   }
 
   async create(createProductDto: CreateProductDto) {
@@ -36,12 +38,16 @@ export class ProductsService implements OnModuleInit {
     });
 
     // 2. Emitir evento a Kafka para la analítica / IA
-    this.kafkaClient.emit('product.created', JSON.stringify({
-      eventId: crypto.randomUUID(),
-      eventType: 'PRODUCT_CREATED',
-      timestamp: new Date().toISOString(),
-      payload: newProduct,
-    }));
+    try {
+      this.kafkaClient.emit('product.created', JSON.stringify({
+        eventId: crypto.randomUUID(),
+        eventType: 'PRODUCT_CREATED',
+        timestamp: new Date().toISOString(),
+        payload: newProduct,
+      }));
+    } catch (err: any) {
+      console.warn('⚠️ [AI Studio] Kafka emit product.created warning:', err?.message || err);
+    }
 
     return newProduct;
   }
@@ -52,13 +58,16 @@ export class ProductsService implements OnModuleInit {
       include: { variants: true },
     });
 
-    this.kafkaClient.emit('catalog.viewed', JSON.stringify({
-      timestamp: new Date().toISOString(),
-      totalProductsRetrieved: product.length,
-    }))
+    try {
+      this.kafkaClient.emit('catalog.viewed', JSON.stringify({
+        timestamp: new Date().toISOString(),
+        totalProductsRetrieved: product.length,
+      }));
+    } catch (err: any) {
+      console.warn('⚠️ [AI Studio] Kafka emit catalog.viewed warning:', err?.message || err);
+    }
 
     return product;
-
   }
 
   update(id: number, updateProductDto: UpdateProductDto) {
@@ -72,7 +81,7 @@ export class ProductsService implements OnModuleInit {
     });
   }
 
-   remove(id: number) {
+  remove(id: number) {
     return `This action removes a #${id} product`;
   }
 }

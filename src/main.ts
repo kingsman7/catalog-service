@@ -15,7 +15,8 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(3000);
-  console.log(`🚀 Catalog Service corriendo en: http://localhost:3000`);
+  const port = process.env.PORT || 3000;
+  await app.listen(port, '0.0.0.0');
+  console.log(`🚀 Catalog Service corriendo en: http://0.0.0.0:${port}`);
 }
 bootstrap();

@@ -14,7 +14,8 @@ import { PrismaModule } from '../prisma/prisma.module.js';
         options:{
           client:{
             clientId: 'catalog-service',
-            brokers: [process.env.KAFKA_BROKER || 'localhost:9092']
+            brokers: [process.env.KAFKA_BROKER || 'localhost:9092'],
+            retry: { retries: 0, initialRetryTime: 100 },
           }
         }
       }
